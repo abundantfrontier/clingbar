@@ -19,7 +19,7 @@ Multi-project setups often look like:
 | Desktop 2 | Project A (editor + terminal) |
 | Desktop 3 | Project B |
 
-You want to hop between VS Code and Terminal **without** leaving Project A’s Space. The Dock and ⌘Tab don’t guarantee that. ClingBar does—by design.
+You want to hop between VS Code and Terminal **without** leaving Project A’s Space. The Dock and ⌘Tab don’t guarantee that. ClingBar does, by design.
 
 ---
 
@@ -30,7 +30,7 @@ You want to hop between VS Code and Terminal **without** leaving Project A’s S
 | **Sticky edge bar** | Survives Space switches (`canJoinAllSpaces` + `stationary`) |
 | **Focus pins** | Click → raise / cycle windows **only on this Space** |
 | **New window here** | Multi-window apps with nothing on this Space open a new window **here** (not jump) |
-| **Current tasks** | Any app with a window on this Space appears on the bar—no pin required |
+| **Current tasks** | Any app with a window on this Space appears on the bar (no pin required) |
 | **Apps picker** | Search installed apps → **Open Here** once, or **Add to Focus Bar** for a lasting slot |
 | **Spaces button** | Opens system **Mission Control** (same idea as F3) |
 | **Single-window apps** | Stocks, System Settings, etc. only show on the Space where they’re open |
@@ -40,8 +40,8 @@ You want to hop between VS Code and Terminal **without** leaving Project A’s S
 
 ### Focus bar slots
 
-1. **Pins (lasting)** — Defaults (VS Code, Terminal, …) plus anything you add. Stored in settings.
-2. **Current tasks (temporary)** — Apps that have a window **on this Space**, whether you opened them from ClingBar, the Dock, Spotlight, or another desktop. They leave the bar when they leave the Space. Right-click → **Add to Focus Bar** if you want them to stay.
+1. **Pins (lasting).** Defaults (VS Code, Terminal, …) plus anything you add. Stored in settings.
+2. **Current tasks (temporary).** Apps that have a window **on this Space**, whether you opened them from ClingBar, the Dock, Spotlight, or another desktop. They leave the bar when they leave the Space. Right-click → **Add to Focus Bar** if you want them to stay.
 
 ### Layout
 
@@ -49,9 +49,9 @@ You want to hop between VS Code and Terminal **without** leaving Project A’s S
 [ Apps ]  ·  focus apps / current tasks  ·  [ Spaces ]  ·  drag handle
 ```
 
-- **Apps** — stay-here launcher + add pins  
-- **Spaces** — Mission Control  
-- **Drag handle** — move the bar to another edge (left / right / top / bottom)
+- **Apps:** stay-here launcher + add pins  
+- **Spaces:** Mission Control  
+- **Drag handle:** move the bar to another edge (left / right / top / bottom)
 
 ---
 
@@ -136,7 +136,7 @@ Pins stay in settings; only the **slot** hides when the instance lives only on a
 
 ### Multi-monitor
 
-Today the bar is laid out against **`NSScreen.main`** (primary display). Extended desktop works, but there is no per-display bar yet—see Roadmap.
+Today the bar is laid out against **`NSScreen.main`** (primary display). Extended desktop works, but there is no per-display bar yet (see Roadmap).
 
 ### Presentations
 
@@ -244,7 +244,7 @@ Earlier work explored **custom Space switching** (private CGS/SkyLight), an in-a
 
 - Prefer **manual launch** of `ClingBar.app` when testing Accessibility and Space behavior.  
 - Accessibility is required for correct raise / new-window behavior.  
-- Desktop & Dock “switch to Space with windows” can still affect any path that activates an app without a local window—Focus mode is built to minimize those paths.  
+- Desktop & Dock “switch to Space with windows” can still affect any path that activates an app without a local window. Focus mode is built to minimize those paths.  
 - Build artifacts live under `build/` (gitignored).
 
 ```bash
