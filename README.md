@@ -1,6 +1,7 @@
 # ClingBar
 
-![alt text](https://file%2B.vscode-resource.vscode-cdn.net/Users/kb/Documents/screen-shots/clingbar.png?version%3D1785422541326)
+<img width="389" height="56" alt="clingbar" src="https://github.com/user-attachments/assets/50cf807a-6b26-4b53-a1fb-ef07a1b8d2e2" />
+
 
 **A sticky edge bar for macOS that keeps app switching on the current Space.**
 
