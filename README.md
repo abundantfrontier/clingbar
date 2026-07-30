@@ -1,5 +1,7 @@
 # ClingBar
 
+![alt text](https://file%2B.vscode-resource.vscode-cdn.net/Users/kb/Documents/screen-shots/clingbar.png?version%3D1785422541326)
+
 **A sticky edge bar for macOS that keeps app switching on the current Space.**
 
 macOS loves to yank you to another desktop when you click an app that already has windows elsewhere. ClingBar is the opposite: a thin, always-available bar that **raises or opens apps on the Space you’re on**, and leaves desktop switching to Mission Control.
