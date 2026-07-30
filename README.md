@@ -6,6 +6,8 @@
 
 macOS loves to yank you to another desktop when you click an app that already has windows elsewhere. ClingBar is the opposite: a thin, always-available bar that **raises or opens apps on the Space you’re on**, and leaves desktop switching to Mission Control.
 
+Built for people who run **several projects at once**, often with **coding agents** (or other long-running workers) each living in their own desktop: stay focused inside one project’s tools, then deliberately switch Spaces when you change context.
+
 > **ClingBar** is the app (edge chrome + menu bar).  
 > The **Focus bar** is the strip of apps that only act on *this* Space.
 
@@ -13,15 +15,41 @@ macOS loves to yank you to another desktop when you click an app that already ha
 
 ## Why it exists
 
-Multi-project setups often look like:
+### Focus vs context switch
 
-| Space | Work |
-|-------|------|
-| Desktop 1 | Email / calendar |
-| Desktop 2 | Project A (editor + terminal) |
-| Desktop 3 | Project B |
+Two different jobs get mixed up on a normal Mac:
 
-You want to hop between VS Code and Terminal **without** leaving Project A’s Space. The Dock and ⌘Tab don’t guarantee that. ClingBar does, by design.
+| Job | What you want | Who should do it |
+|-----|----------------|------------------|
+| **Stay focused** | Hop between editor, terminal, browser, logs **for this project only** | ClingBar Focus bar |
+| **Change context** | Move to another project / agent / desktop | Mission Control (Spaces button) |
+
+The Dock and ⌘Tab optimize for “find that app,” which often means **another Space**. ClingBar optimizes for “keep me on **this** desktop.”
+
+### Multi-project, multi-agent workflows
+
+A common setup when several agents or workstreams are in flight:
+
+| Space | Context |
+|-------|---------|
+| Desktop 1 | Inbox, calendar, chat |
+| Desktop 2 | **Agent / project A** (editor, agent terminal, docs, preview) |
+| Desktop 3 | **Agent / project B** (another stack of tools) |
+| Desktop 4 | Review, PRs, staging |
+
+On Desktop 2 you might click Terminal, Cursor, and Safari a dozen times while an agent runs. You still want every click to land **in project A’s windows**, not drag you to project B because that app was last used there.
+
+ClingBar helps by:
+
+1. **Pinning the tools you always need** (editor, terminal, browser) so they stay one click away on every Space, but each click only raises or opens **here**.
+2. **Surfacing current tasks** for whatever is already open on this desktop (agent UI, logs, browser tabs as windows), without requiring you to pin every temporary tool.
+3. **Opening a new window on this Space** when a multi-window app has nothing here, so project B’s Terminal session stays put while project A gets its own.
+4. **Hiding single-window apps** that only exist on another desktop, so you do not “click Stocks / Settings” and get pulled out of flow.
+5. **Leaving real desktop changes explicit**: use the **Spaces** control (Mission Control) when you intend to supervise a different agent or project.
+
+In short: **one Space per project or agent, ClingBar inside the Space, Mission Control between Spaces.**
+
+That matches how attention actually works when several agents are working: deep focus inside a stack of tools, then a conscious jump when you change which agent or project you are supervising.
 
 ---
 
@@ -226,7 +254,7 @@ Earlier work explored **custom Space switching** (private CGS/SkyLight), an in-a
 - Replacing Mission Control  
 - Per-display Focus bars (roadmap)  
 - Theming engine  
-- Agent / project integration  
+- Built-in agent APIs or project/workspace sync (ClingBar helps **you** supervise agents via Spaces; it does not control the agents)  
 - Jumping Spaces from a Focus pin click  
 
 ---
