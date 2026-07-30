@@ -51,7 +51,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let button = item.button {
             button.image = AppIconCache.menuBarIcon()
             button.imagePosition = .imageOnly
-            button.toolTip = "ClingBar — Focus bar, Apps, Mission Control, Help"
+            button.toolTip = "ClingBar: Focus bar, Apps, Mission Control, Help, About"
             button.imageScaling = .scaleProportionallyDown
         }
 
@@ -82,6 +82,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(ah)
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "How ClingBar Works…", action: #selector(showHelp), keyEquivalent: "?"))
+        menu.addItem(NSMenuItem(title: "About ClingBar…", action: #selector(showAbout), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Request Accessibility…", action: #selector(requestAccessibility), keyEquivalent: ""))
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit ClingBar", action: #selector(quit), keyEquivalent: "q"))
@@ -122,6 +123,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panelController?.relayout()
     }
     @objc private func showHelp() { HelpPanelController.shared.show() }
+    @objc private func showAbout() { AboutPanelController.shared.show() }
     @objc private func requestAccessibility() { AccessibilityPermission.openSystemSettings() }
     @objc private func quit() { NSApp.terminate(nil) }
 }

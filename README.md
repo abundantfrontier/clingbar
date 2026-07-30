@@ -107,7 +107,8 @@ make run          # Debug build + launch
 |---------|--------|
 | `make build` | Debug build only |
 | `make release` | Release build |
-| `make clean` | Remove `build/` |
+| `make dmg` / `make dist` | Release build + `dist/ClingBar-<version>.dmg` |
+| `make clean` | Remove `build/` and `dist/` |
 | `open ClingBar.xcodeproj` | Open in Xcode |
 
 App product:
@@ -116,7 +117,15 @@ App product:
 build/Build/Products/Debug/ClingBar.app
 ```
 
-For day-to-day use, open that folder in Finder and double-click **ClingBar.app** so the process isn’t tied to a terminal session.
+Disk image (for GitHub Releases):
+
+```text
+dist/ClingBar-0.2.0.dmg
+```
+
+The DMG contains **ClingBar.app** and a link to **Applications** (drag to install). For day-to-day development, open the `.app` under `build/` in Finder so the process isn’t tied to a terminal session.
+
+**Unsigned builds:** first open may need right-click → Open, or `xattr -cr /Applications/ClingBar.app`, plus Accessibility permission.
 
 ---
 
@@ -185,6 +194,7 @@ The panel is **`.floating`** but **not** `.fullScreenAuxiliary`, so it stays abo
 | Dock Edge | Left / Right / Top / Bottom |
 | Auto-Hide | Collapse until mouse nears the edge |
 | How ClingBar Works… | Help panel |
+| About ClingBar… | Version, copyright (Abundant Frontier Institute), MIT |
 | Request Accessibility… | Open System Settings |
 | Quit ClingBar | Exit |
 
