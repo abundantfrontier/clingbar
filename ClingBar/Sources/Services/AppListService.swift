@@ -22,53 +22,112 @@ final class AppListService: ObservableObject {
     private var workspaceObservers: [NSObjectProtocol] = []
     private var refreshSource: DispatchSourceTimer?
     private var cancellables = Set<AnyCancellable>()
+    private var deferredRefreshWork: DispatchWorkItem?
+    /// After a Space switch, skip timer-driven full refreshes until settle.
+    private var suppressTimerRefreshUntil: Date = .distantPast
+    /// While true, full refreshes are deferred; only pin-only updates apply.
+    private var awaitingSpaceSettle = false
 
     private init() {}
 
     func start() {
         settings.$pinnedApps
             .receive(on: RunLoop.main)
-            .sink { [weak self] _ in self?.refresh() }
+            .sink { [weak self] _ in self?.refresh(includeUnpinnedTasks: true) }
             .store(in: &cancellables)
 
         settings.$includeUnpinnedOnSpace
             .receive(on: RunLoop.main)
-            .sink { [weak self] _ in self?.refresh() }
+            .sink { [weak self] _ in self?.refresh(includeUnpinnedTasks: true) }
             .store(in: &cancellables)
 
-        // pinnedTabs don't appear on focus bar
-
         let nc = NSWorkspace.shared.notificationCenter
-        for name in [
+        let immediate: [NSNotification.Name] = [
             NSWorkspace.didLaunchApplicationNotification,
             NSWorkspace.didTerminateApplicationNotification,
-            NSWorkspace.didActivateApplicationNotification,
-            NSWorkspace.activeSpaceDidChangeNotification,
-        ] {
+        ]
+        for name in immediate {
             let token = nc.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
-                Task { @MainActor in self?.refresh() }
+                Task { @MainActor in self?.refresh(includeUnpinnedTasks: true) }
             }
             workspaceObservers.append(token)
         }
 
+        // Space change: strip temporary tasks *immediately* (pins only) so the bar
+        // does not keep the previous Space’s extras and then shrink after filtering.
+        // Full “current tasks” pass runs after CG window list settles.
+        let spaceToken = nc.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.handleSpaceDidChange()
+            }
+        }
+        workspaceObservers.append(spaceToken)
+
+        let activateToken = nc.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                // Don’t re-introduce unpinned tasks mid Space-settle.
+                guard let self, !self.awaitingSpaceSettle else { return }
+                self.scheduleRefresh(after: 0.2, includeUnpinnedTasks: true)
+            }
+        }
+        workspaceObservers.append(activateToken)
+
         let timer = DispatchSource.makeTimerSource(queue: .main)
         timer.schedule(deadline: .now() + 1.5, repeating: 1.5, leeway: .milliseconds(200))
-        timer.setEventHandler { [weak self] in self?.refresh() }
+        timer.setEventHandler { [weak self] in
+            guard let self else { return }
+            if Date() < self.suppressTimerRefreshUntil { return }
+            if self.awaitingSpaceSettle { return }
+            self.refresh(includeUnpinnedTasks: true)
+        }
         timer.resume()
         refreshSource = timer
-        refresh()
+
+        // First paint: pins only (stable length), then tasks once windows are known.
+        refresh(includeUnpinnedTasks: false)
+        scheduleRefresh(after: 0.35, includeUnpinnedTasks: true)
     }
 
     func stop() {
         let nc = NSWorkspace.shared.notificationCenter
         workspaceObservers.forEach { nc.removeObserver($0) }
         workspaceObservers.removeAll()
+        deferredRefreshWork?.cancel()
+        deferredRefreshWork = nil
         refreshSource?.cancel()
         refreshSource = nil
         cancellables.removeAll()
     }
 
-    func refresh() {
+    private func handleSpaceDidChange() {
+        awaitingSpaceSettle = true
+        // Drop previous Space’s current tasks right away — bar stays at pin length.
+        refresh(includeUnpinnedTasks: false)
+        scheduleRefresh(after: 0.5, includeUnpinnedTasks: true)
+    }
+
+    private func scheduleRefresh(after delay: TimeInterval, includeUnpinnedTasks: Bool) {
+        deferredRefreshWork?.cancel()
+        suppressTimerRefreshUntil = Date().addingTimeInterval(delay + 0.15)
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.awaitingSpaceSettle = false
+            self.refresh(includeUnpinnedTasks: includeUnpinnedTasks)
+        }
+        deferredRefreshWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
+    }
+
+    /// - Parameter includeUnpinnedTasks: when false, only lasting Focus pins (stable bar length).
+    func refresh(includeUnpinnedTasks: Bool = true) {
         let selfPID = ProcessInfo.processInfo.processIdentifier
         let onscreen = WindowEnumerator.onscreenWindows(excludingPID: selfPID)
 
@@ -85,19 +144,9 @@ final class AppListService: ObservableObject {
         for pin in settings.pinnedApps {
             let count = windowCount[pin.bundleIdentifier] ?? 0
             let running = runningIDs.contains(pin.bundleIdentifier)
-            // Still “owned” by the pin list for unpinned-on-space dedupe, even if hidden.
             seen.insert(pin.bundleIdentifier)
 
-            // Single-destination apps (Stocks, etc.): hide the slot when the only
-            // instance lives on another Space. Pin stays in settings and reappears
-            // when you return to that Space (or quit the app). Multi-window apps
-            // stay visible so we can open a new window here.
-            guard FocusBarVisibility.shouldShowPin(
-                bundleIdentifier: pin.bundleIdentifier,
-                isRunning: running,
-                hasWindowOnCurrentSpace: count > 0
-            ) else { continue }
-
+            // Always keep pins (stable length across Space switches).
             result.append(BarAppItem(
                 bundleIdentifier: pin.bundleIdentifier,
                 displayName: pin.displayName,
@@ -108,7 +157,7 @@ final class AppListService: ObservableObject {
             ))
         }
 
-        if settings.includeUnpinnedOnSpace {
+        if includeUnpinnedTasks, settings.includeUnpinnedOnSpace {
             for win in onscreen {
                 guard let bid = win.bundleIdentifier, !seen.contains(bid) else { continue }
                 if bid == Bundle.main.bundleIdentifier { continue }

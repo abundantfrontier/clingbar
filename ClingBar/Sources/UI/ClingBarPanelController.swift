@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import CoreGraphics
 
 @MainActor
 final class ClingBarPanelController: NSObject {
@@ -23,11 +24,29 @@ final class ClingBarPanelController: NSObject {
     private var dragStartMouse = NSPoint.zero
     private var dragStartFrame = NSRect.zero
 
+    /// Collection flags that make the bar ride Spaces like Dock / menu bar chrome:
+    /// present on every Space, fixed during the slide, not in Cmd-` cycle.
+    /// Intentionally **no** `.fullScreenAuxiliary` (keeps us off presentations).
+    private static let stickySpaceBehavior: NSWindow.CollectionBehavior = [
+        .canJoinAllSpaces,
+        .stationary,
+        .ignoresCycle,
+    ]
+
+    /// Just under the menu bar. `.floating` is too low: during Space-swipe
+    /// compositing, desktop layers often cover floating windows so the bar
+    /// appears to slide away or drop behind. Menu-bar-adjacent levels stay put.
+    private static var stickyBarLevel: NSWindow.Level {
+        NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.mainMenuWindow)) - 1)
+    }
+
     init(settings: SettingsStore, appList: AppListService) {
         self.settings = settings
         self.appList = appList
         super.init()
-        // Any Space change dismisses selectors — they must not ride along to the next desktop.
+        // Space change: only dismiss popouts. Do **not** orderFront / relayout /
+        // re-set collectionBehavior here — that causes a disappear→reappear flash
+        // and thrash while the Space swipe is still compositing.
         spaceHandlerToken = SpaceService.shared.addSpaceChangedHandler { [weak self] in
             self?.closeAllPopouts()
         }
@@ -35,12 +54,25 @@ final class ClingBarPanelController: NSObject {
 
     func show() {
         if panel == nil { buildPanel() }
+        applyStickyChrome()
         panel?.orderFrontRegardless()
         isCollapsed = false
         relayout()
     }
 
     func hide() { panel?.orderOut(nil) }
+
+    /// Window level + collection behavior for Dock-like Space stickiness.
+    private func applyStickyChrome() {
+        guard let panel else { return }
+        applyStickyChrome(to: panel)
+    }
+
+    private func applyStickyChrome(to panel: NSPanel) {
+        panel.level = Self.stickyBarLevel
+        panel.collectionBehavior = Self.stickySpaceBehavior
+        panel.animationBehavior = .none
+    }
 
     func relayout() {
         guard let panel, let screen = NSScreen.main else { return }
@@ -60,17 +92,26 @@ final class ClingBarPanelController: NSObject {
             defer: false
         )
         panel.isFloatingPanel = true
-        // `.floating` keeps the bar above normal app windows.
-        // Do **not** use `.fullScreenAuxiliary` — that draws over Keynote/PowerPoint/
-        // browser presentations and other full-screen apps. Without it, macOS keeps
-        // the bar on the desktop Spaces only (still sticky via canJoinAllSpaces).
-        panel.level = .floating
-        panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = true
+        // Sticky Space chrome: high level + canJoinAllSpaces + stationary.
+        // Not fullScreenAuxiliary (presentations stay clean).
+        applyStickyChrome(to: panel)
+        // Opaque panel + no shadow: vibrancy/shadow glitch hard during Space swipes
+        // on recent betas (disappear, recolor, resize thrash).
+        panel.isOpaque = true
+        panel.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.92)
+        panel.hasShadow = false
         panel.hidesOnDeactivate = false
         panel.becomesKeyOnlyIfNeeded = true
+        panel.isMovable = false
+        // Kill implicit animations on frame/alpha during compositor Space transitions.
+        panel.contentView?.wantsLayer = true
+        panel.contentView?.layer?.actions = [
+            "bounds": NSNull(),
+            "frame": NSNull(),
+            "position": NSNull(),
+            "opacity": NSNull(),
+            "contents": NSNull(),
+        ]
 
         let content = ClingBarContentView(frame: .zero)
         content.orientation = settings.edge.isVertical ? .vertical : .horizontal
@@ -86,10 +127,15 @@ final class ClingBarPanelController: NSObject {
         self.panel = panel
         self.contentView = content
 
-        appList.$items.receive(on: RunLoop.main).sink { [weak self] items in
-            self?.contentView?.update(items: items)
-            self?.relayoutSizeOnly()
-        }.store(in: &cancellables)
+        // Apply list updates immediately (pins-only strip on Space change is intentional).
+        appList.$items
+            .receive(on: RunLoop.main)
+            .sink { [weak self] items in
+                guard let self else { return }
+                self.contentView?.update(items: items)
+                self.relayoutSizeOnly()
+            }
+            .store(in: &cancellables)
 
         settings.objectWillChange.receive(on: RunLoop.main).sink { [weak self] _ in
             self?.relayout()

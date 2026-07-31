@@ -35,12 +35,17 @@ final class ClingBarContentView: NSView {
         super.init(frame: frameRect)
         wantsLayer = true
 
-        background.material = .hudWindow
-        background.blendingMode = .behindWindow
+        // Solid-ish chrome (not `.behindWindow`): Space swipes sample the sliding
+        // desktop through vibrancy and flash colors on recent macOS betas.
+        background.material = .popover
+        background.blendingMode = .withinWindow
         background.state = .active
+        background.isEmphasized = true
         background.wantsLayer = true
         background.layer?.cornerRadius = 12
         background.layer?.masksToBounds = true
+        // Freeze appearance so Space focus changes do not restyle the bar mid-swipe.
+        background.appearance = NSApp.effectiveAppearance
         addSubview(background)
 
         for rule in [topRule, bottomRule] {
@@ -260,16 +265,29 @@ final class BarSlotButton: NSView {
         appItem = item
         iconView.contentTintColor = nil
         iconView.image = AppIconCache.icon(forBundleID: item.bundleIdentifier, size: 28)
-        iconView.alphaValue = item.hasWindowOnCurrentSpace ? 1 : (item.isRunning ? 0.75 : 0.45)
+        // Dim running-elsewhere more for single-window-style apps (no new window here).
+        let elsewhereOnly = item.isRunning && !item.hasWindowOnCurrentSpace
+            && !FocusBarVisibility.canOpenAnotherWindowHere(item.bundleIdentifier)
+        if item.hasWindowOnCurrentSpace {
+            iconView.alphaValue = 1
+        } else if elsewhereOnly {
+            iconView.alphaValue = 0.35
+        } else if item.isRunning {
+            iconView.alphaValue = 0.75
+        } else {
+            iconView.alphaValue = 0.45
+        }
         label.stringValue = item.displayName
         label.isHidden = !showLabel
         indicator.isHidden = !item.hasWindowOnCurrentSpace
         if item.hasWindowOnCurrentSpace {
-            toolTip = "\(item.displayName) — on this Space (click to raise / cycle)"
+            toolTip = "\(item.displayName): on this Space (click to raise / cycle)"
+        } else if elsewhereOnly {
+            toolTip = "\(item.displayName): open on another Space (stays there; no jump)"
         } else if item.isRunning {
-            toolTip = "\(item.displayName) — open a window on this Space"
+            toolTip = "\(item.displayName): open a window on this Space"
         } else {
-            toolTip = "\(item.displayName) — launch on this Space"
+            toolTip = "\(item.displayName): launch on this Space"
         }
         needsLayout = true
     }

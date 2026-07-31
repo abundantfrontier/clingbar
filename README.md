@@ -64,7 +64,7 @@ That matches how attention actually works when several agents are working: deep 
 | **Current tasks** | Any app with a window on this Space appears on the bar (no pin required) |
 | **Apps picker** | Search installed apps → **Open Here** once, or **Add to Focus Bar** for a lasting slot |
 | **Spaces button** | Opens system **Mission Control** (same idea as F3) |
-| **Single-window apps** | Stocks, System Settings, etc. only show on the Space where they’re open |
+| **Single-window apps** | Pins stay visible but **dim** when the only instance is on another Space |
 | **Single instance** | A second launch re-shows the existing bar; no duplicate process |
 | **Presentations** | Floats over normal apps; not a full-screen auxiliary (stays off Keynote / PPT play mode) |
 | **In-app help** | First-run panel + menu **How ClingBar Works…** |
@@ -166,13 +166,13 @@ Finder is special: a plain activate or `open ~/` often jumps to an existing wind
 
 ### Single-window apps
 
-There is no reliable macOS flag for “single-window app.” ClingBar uses:
+There is no reliable macOS flag for “single-window app.” ClingBar uses known multi-window IDs, a utility list (Stocks, Settings, Calculator, …), and window counts.
 
-- Known multi-window IDs (Terminal, browsers, editors, Finder, …)  
-- A list of single-destination utilities (Stocks, Settings, Calculator, …)  
-- Runtime window counts for show/hide  
+Pins always stay on the bar (stable length across Space switches). When a single-window app only exists on another Space, the slot is **dimmed** and a click will not jump desktops.
 
-Pins stay in settings; only the **slot** hides when the instance lives only on another Space.
+### Space transitions (macOS betas)
+
+Sticky chrome uses `canJoinAllSpaces` + `stationary` and a high window level. On some **macOS 27 betas**, WindowServer still flashes stationary panels during a Space swipe. ClingBar avoids thrashing the bar mid-swipe (no re-front/relayout, deferred list refresh, non-behind-window chrome). Residual flicker may be OS-side until betas settle.
 
 ### Multi-monitor
 
